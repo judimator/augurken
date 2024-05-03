@@ -1,0 +1,108 @@
+name: release
+
+on:
+  release:
+    types:
+      - released
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }} (${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows, darwin ] # linux, darwin, windows
+        compiler: [ gcc ]
+        archiver: [ zip ] # tar, zip
+        arch: [ amd64 ]   # amd64, 386
+        include:
+          - os: linux
+            archiver: tar
+            arch: amd64
+          - os: linux
+            archiver: tar
+            arch: arm64
+          - os: darwin
+            archiver: tar
+            arch: arm64
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Generate builder values
+        id: values
+        run: |
+          echo "version=$(echo ${GITHUB_REF##*/} | sed -e 's/^[vV ]*//')" >> $GITHUB_OUTPUT
+          echo "timestamp=$(echo $(date +%FT%T%z))" >> $GITHUB_OUTPUT
+          echo "binary-name=$(echo $(echo augurken`[ ${{ matrix.os }} = 'windows' ] && echo '.exe'`))" >> $GITHUB_OUTPUT
+
+      - name: Compile binary file
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+          CC: ${{ matrix.compiler }}
+          CGO_ENABLED: 0
+          LDFLAGS: >-
+            -s
+            -X github.com/judimator/augurken/meta.version=${{ steps.values.outputs.version }}
+            -X github.com/judimator/augurken/meta.buildTime=${{ steps.values.outputs.timestamp }}
+        run: |
+          go build -trimpath -ldflags "$LDFLAGS" -o "./${{ steps.values.outputs.binary-name }}" ./
+          stat "./${{ steps.values.outputs.binary-name }}"
+
+      - name: Generate distributive directory name
+        id: dist-dir
+        run: >
+          echo "name=$(echo augurken-${{ steps.values.outputs.version }}-$(
+            [ ${{ matrix.os }} != '' ] && echo '${{ matrix.os }}' || echo 'unknown'
+          ))-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+
+      - name: Generate distributive archive name
+        id: dist-arch
+        run: >
+          echo "name=$(echo ${{ steps.dist-dir.outputs.name }}.$(
+            case ${{ matrix.archiver }} in
+              zip) echo 'zip';;
+              tar) echo 'tar.gz';;
+              *)   exit 10;
+            esac
+          ))" >> $GITHUB_OUTPUT
+
+      - name: Create distributive
+        run: |
+          mkdir ${{ steps.dist-dir.outputs.name }}
+          mv "./${{ steps.values.outputs.binary-name }}" ./${{ steps.dist-dir.outputs.name }}/
+          cp  ./README.md ./LICENSE ./${{ steps.dist-dir.outputs.name }}
+
+      - name: Pack distributive using tar
+        if: matrix.archiver == 'tar'
+        run: tar -zcf "${{ steps.dist-arch.outputs.name }}" "${{ steps.dist-dir.outputs.name }}"
+
+      - name: Pack distributive using zip
+        if: matrix.archiver == 'zip'
+        run: zip -r -q "${{ steps.dist-arch.outputs.name }}" "${{ steps.dist-dir.outputs.name }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.dist-dir.outputs.name }}
+          path: ${{ steps.dist-arch.outputs.name }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ steps.dist-arch.outputs.name }}
+          asset_name: ${{ steps.dist-arch.outputs.name }}
+          tag: ${{ github.ref }}
