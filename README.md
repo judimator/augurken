@@ -32,6 +32,12 @@ Format a folder with features
 $ augurken format /path/to/features
 ```
 
+Format a feature file with indent. Augurken uses **space** as indent
+
+```shell
+$ augurken format -i 2 /path/to/filename.feature
+```
+
 ⚠️ Augurken works only on `UTF-8` encoded files, it will detect and convert automatically files that are not encoded in this charset.
 
 # Features
