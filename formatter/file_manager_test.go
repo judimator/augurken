@@ -237,6 +237,48 @@ hello world
 			},
 		},
 		{
+			"compact json in example",
+			"./tmp/file1.feature",
+			func() {
+				content := []byte(`Feature: test feature
+
+Scenario Outline: Compact json
+Given I load data:
+  """
+  <data>
+  """
+Examples: 
+  | data                              |
+  |{"key1": "value2",    "key2": "value2"}|
+  |[1,    2,   3]                         |
+`)
+
+				assert.NoError(t, os.RemoveAll("./tmp/"))
+				assert.NoError(t, os.MkdirAll("./tmp/", 0o777))
+				assert.NoError(t, os.WriteFile("./tmp/file1.feature", content, 0o777))
+			},
+			func(err error) {
+				assert.NoError(t, err)
+
+				content := `Feature: test feature
+
+  Scenario Outline: Compact json
+    Given I load data:
+      """
+      <data>
+      """
+    Examples:
+      | data                              |
+      | {"key1":"value2","key2":"value2"} |
+      | [1,2,3]                           |
+`
+
+				b, e := os.ReadFile("./tmp/file1.feature")
+				assert.NoError(t, e)
+				assert.EqualValues(t, content, string(b))
+			},
+		},
+		{
 			"format a folder",
 			"./tmp/",
 			func() {

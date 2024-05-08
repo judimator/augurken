@@ -2,13 +2,14 @@ package formatter
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 	"unicode/utf8"
 
 	gherkin "github.com/cucumber/gherkin/go/v28"
-	"github.com/judimator/augurken/json"
+	augurkenjson "github.com/judimator/augurken/json"
 )
 
 func format(token *token, indent int) ([]byte, error) {
@@ -87,17 +88,14 @@ func format(token *token, indent int) ([]byte, error) {
 
 				// Transform into string and get bytes
 				source := []byte(strings.Join(lines, " "))
+				prefixSpace := strings.Repeat(" ", padding)
+				indentSpace := strings.Repeat(" ", indent)
 
-				if ok := json.Valid(source); ok == true {
-					_ = json.Indent(
-						&buffer,
-						source,
-						strings.Repeat(" ", padding),
-						strings.Repeat(" ", indent),
-					)
+				if ok := augurkenjson.Valid(source); ok == true {
+					_ = augurkenjson.Indent(&buffer, source, prefixSpace, indentSpace)
 					lines = []string{string(buffer.Bytes())}
 				}
-				// TODO: Handle json error and print col and line with it
+				// TODO: Handle json error and print col and line
 			}
 
 			lines = trimLinesSpace(lines)
@@ -223,9 +221,19 @@ func extractTableRowsAndComments(tokens []*gherkin.Token) []string {
 		} else {
 			var row []string
 			for _, data := range token.Items {
+				var text string
+
+				source := []byte(data.Text)
+				if ok := json.Valid(source); ok == true {
+					var buffer bytes.Buffer
+					_ = json.Compact(&buffer, source)
+					text = buffer.String()
+				} else {
+					text = data.Text
+				}
+
 				// A remaining pipe means it was escaped before to not be messed with pipe column delimiter
 				// so here we introduce the escaping sequence back
-				text := data.Text
 				text = strings.ReplaceAll(text, "\\", "\\\\")
 				text = strings.ReplaceAll(text, "\n", "\\n")
 				text = strings.ReplaceAll(text, "|", "\\|")

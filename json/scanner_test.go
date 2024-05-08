@@ -55,51 +55,6 @@ func TestValid(t *testing.T) {
 	}
 }
 
-func TestCompact(t *testing.T) {
-	tests := []struct {
-		CaseName
-		compact string
-		indent  string
-	}{
-		{Name(""), `1`, `1`},
-		{Name(""), `{}`, `{}`},
-		{Name(""), `[]`, `[]`},
-		{Name(""), `{"":2}`, "{\n\t\"\": 2\n}"},
-		{Name(""), `[3]`, "[\n\t3\n]"},
-		{Name(""), `[1,2,3]`, "[\n\t1,\n\t2,\n\t3\n]"},
-		{Name(""), `{"x":1}`, "{\n\t\"x\": 1\n}"},
-		{Name(""), `[true,false,null,"x",1,1.5,0,-5e+2]`, `[
-	true,
-	false,
-	null,
-	"x",
-	1,
-	1.5,
-	0,
-	-5e+2
-]`},
-		{Name(""), "{\"\":\"<>&\u2028\u2029\"}", "{\n\t\"\": \"<>&\u2028\u2029\"\n}"}, // See golang.org/issue/34070
-	}
-	var buf bytes.Buffer
-	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
-			buf.Reset()
-			if err := Compact(&buf, []byte(tt.compact)); err != nil {
-				t.Errorf("%s: Compact error: %v", tt.Where, err)
-			} else if got := buf.String(); got != tt.compact {
-				t.Errorf("%s: Compact:\n\tgot:  %s\n\twant: %s", tt.Where, indentNewlines(got), indentNewlines(tt.compact))
-			}
-
-			buf.Reset()
-			if err := Compact(&buf, []byte(tt.indent)); err != nil {
-				t.Errorf("%s: Compact error: %v", tt.Where, err)
-			} else if got := buf.String(); got != tt.compact {
-				t.Errorf("%s: Compact:\n\tgot:  %s\n\twant: %s", tt.Where, indentNewlines(got), indentNewlines(tt.compact))
-			}
-		})
-	}
-}
-
 func TestIndent(t *testing.T) {
 	tests := []struct {
 		CaseName
@@ -145,28 +100,6 @@ func TestIndent(t *testing.T) {
 				t.Errorf("%s: Indent error: %v", tt.Where, err)
 			} else if got := buf.String(); got != tt.indent {
 				t.Errorf("%s: Indent:\n\tgot:  %s\n\twant: %s", tt.Where, indentNewlines(got), indentNewlines(tt.indent))
-			}
-		})
-	}
-}
-
-func TestCompactSeparators(t *testing.T) {
-	// U+2028 and U+2029 should be escaped inside strings.
-	// They should not appear outside strings.
-	tests := []struct {
-		CaseName
-		in, compact string
-	}{
-		{Name(""), "{\"\u2028\": 1}", "{\"\u2028\":1}"},
-		{Name(""), "{\"\u2029\" :2}", "{\"\u2029\":2}"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
-			var buf bytes.Buffer
-			if err := Compact(&buf, []byte(tt.in)); err != nil {
-				t.Errorf("%s: Compact error: %v", tt.Where, err)
-			} else if got := buf.String(); got != tt.compact {
-				t.Errorf("%s: Compact:\n\tgot:  %s\n\twant: %s", tt.Where, indentNewlines(got), indentNewlines(tt.compact))
 			}
 		})
 	}

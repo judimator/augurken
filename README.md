@@ -15,6 +15,7 @@ Available Commands:
 
 Flags:
   -h, --help       Help
+  -i, --indent     Indent 
       --version    Current Augurken version 
  
 Use "augurken [command] --help" for more information about a command.
@@ -43,8 +44,9 @@ $ augurken format -i 2 /path/to/filename.feature
 # Features
 - Format Gherkin features
 - Format JSON in step doc string
+- Scenario Outline. Recognize and compact JSON inside table 
 
- ## Supported JSON format
+ ## Supported JSON format in step doc string 
 
 ```json
 {
@@ -72,6 +74,40 @@ $ augurken format -i 2 /path/to/filename.feature
   "value3",
   ...
 ]
+```
+
+## Compact JSON inside table
+
+Examples like
+
+```gherkin
+Feature: The feature
+
+  Scenario Outline: Compact json
+    Given I load data:
+    """
+    <data>
+    """
+    Examples:
+      |data                                        |
+      | {"key1":   "value2",   "key2":   "value2"} |
+      | [1,   2,   3]                              |
+```
+
+become
+
+```gherkin
+Feature: The feature
+
+  Scenario Outline: Compact json
+    Given I load data:
+    """
+    <data>
+    """
+    Examples:
+      |data                               |
+      | {"key1":"value2","key2":"value2"} |
+      | [1,2,3]                           |
 ```
 
 # Contribute<a id="contribute"></a>
