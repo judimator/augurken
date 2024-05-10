@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/judimator/augurken/cmd"
-	"github.com/judimator/augurken/formatter"
 	"os"
 	"path/filepath"
+
+	"github.com/judimator/augurken/cmd"
+	"github.com/judimator/augurken/formatter"
 )
 
 var exitFn = os.Exit
