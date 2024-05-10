@@ -279,6 +279,42 @@ Examples:
 			},
 		},
 		{
+			"format bullet points",
+			"./tmp/file1.feature",
+			func() {
+				content := []byte(`Feature: bullet points
+
+Scenario: format bullet points
+Given Some state
+* Another state
+* Yet another state
+When check formatting
+Then all is good
+`)
+
+				assert.NoError(t, os.RemoveAll("./tmp/"))
+				assert.NoError(t, os.MkdirAll("./tmp/", 0o777))
+				assert.NoError(t, os.WriteFile("./tmp/file1.feature", content, 0o777))
+			},
+			func(err error) {
+				assert.NoError(t, err)
+
+				content := `Feature: bullet points
+
+  Scenario: format bullet points
+    Given Some state
+    * Another state
+    * Yet another state
+    When check formatting
+    Then all is good
+`
+
+				b, e := os.ReadFile("./tmp/file1.feature")
+				assert.NoError(t, e)
+				assert.EqualValues(t, content, string(b))
+			},
+		},
+		{
 			"format a folder",
 			"./tmp/",
 			func() {

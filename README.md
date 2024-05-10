@@ -89,7 +89,7 @@ Feature: The feature
     <data>
     """
     Examples:
-      |data                                        |
+      | data                                       |
       | {"key1":   "value2",   "key2":   "value2"} |
       | [1,   2,   3]                              |
 ```
@@ -105,7 +105,7 @@ Feature: The feature
     <data>
     """
     Examples:
-      |data                               |
+      | data                              |
       | {"key1":"value2","key2":"value2"} |
       | [1,2,3]                           |
 ```
