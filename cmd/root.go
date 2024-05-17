@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/judimator/augurken/cmd/check"
 	"github.com/judimator/augurken/cmd/format"
 	"github.com/judimator/augurken/formatter"
 	"github.com/judimator/augurken/meta"
@@ -22,6 +23,6 @@ func NewCommand(cmdName string, logger formatter.Log) *cobra.Command {
 			runtime.GOARCH,
 		),
 	}
-	cmd.AddCommand(format.NewCommand(logger))
+	cmd.AddCommand(format.NewCommand(logger), check.NewCommand(logger))
 	return cmd
 }

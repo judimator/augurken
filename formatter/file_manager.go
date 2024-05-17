@@ -35,7 +35,11 @@ func NewFileManager(indent int, logger Log) FileManager {
 }
 
 func (f FileManager) FormatAndReplace(path string) error {
-	return f.process(path)
+	return f.process(path, replaceFileWithContent)
+}
+
+func (f FileManager) Check(path string) error {
+	return f.process(path, check)
 }
 
 func (f FileManager) Format(filename string) ([]byte, error) {
@@ -79,7 +83,7 @@ func (f FileManager) Format(filename string) ([]byte, error) {
 	return contentHelper.Restore(content), nil
 }
 
-func (f FileManager) process(path string) error {
+func (f FileManager) process(path string, processFn func(file string, content []byte) error) error {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return err
@@ -87,7 +91,7 @@ func (f FileManager) process(path string) error {
 
 	switch mode := fi.Mode(); {
 	case mode.IsDir():
-		if err := f.processPath(path); err != nil {
+		if err := f.processPath(path, processFn); err != nil {
 			return err
 		}
 	case mode.IsRegular():
@@ -96,7 +100,7 @@ func (f FileManager) process(path string) error {
 			return err
 		}
 
-		if err := replaceFileWithContent(path, b); err != nil {
+		if err := processFn(path, b); err != nil {
 			return err
 		}
 
@@ -105,7 +109,7 @@ func (f FileManager) process(path string) error {
 	return nil
 }
 
-func (f FileManager) processPath(path string) error {
+func (f FileManager) processPath(path string, processFn func(file string, content []byte) error) error {
 	fc := make(chan string)
 	wg := sync.WaitGroup{}
 
@@ -128,8 +132,8 @@ func (f FileManager) processPath(path string) error {
 					continue
 				}
 
-				if err := replaceFileWithContent(file, b); err != nil {
-					f.logger.Error(ProcessFileError{Message: err.Error(), File: file})
+				if err := processFn(file, b); err != nil {
+					f.logger.Error(err)
 					continue
 				}
 
@@ -158,6 +162,17 @@ func replaceFileWithContent(file string, content []byte) error {
 		return ProcessFileError{Message: err.Error(), File: file}
 	}
 
+	return nil
+}
+
+func check(file string, content []byte) error {
+	currentContent, err := os.ReadFile(file)
+	if err != nil {
+		return ProcessFileError{Message: err.Error(), File: file}
+	}
+	if !bytes.Equal(currentContent, content) {
+		return ProcessFileError{Message: "file is not properly formatted", File: file}
+	}
 	return nil
 }
 

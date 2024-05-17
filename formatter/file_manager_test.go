@@ -200,7 +200,7 @@ func TestFileManagerFormatAndReplace(t *testing.T) {
 	scenarios := []scenario{
 		{
 			"format a file",
-			"./tmp/file1.feature",
+			"tmp/file1.feature",
 			func() {
 				content := []byte(`Feature: test
   test
@@ -213,9 +213,9 @@ hello world
 """
 `)
 
-				assert.NoError(t, os.RemoveAll("./tmp/"))
-				assert.NoError(t, os.MkdirAll("./tmp/", 0o777))
-				assert.NoError(t, os.WriteFile("./tmp/file1.feature", content, 0o777))
+				assert.NoError(t, os.RemoveAll("tmp/"))
+				assert.NoError(t, os.MkdirAll("tmp/", 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o777))
 			},
 			func(err error) {
 				assert.NoError(t, err)
@@ -231,14 +231,14 @@ hello world
       """
 `
 
-				b, e := os.ReadFile("./tmp/file1.feature")
+				b, e := os.ReadFile("tmp/file1.feature")
 				assert.NoError(t, e)
 				assert.EqualValues(t, content, string(b))
 			},
 		},
 		{
 			"compact json in example",
-			"./tmp/file1.feature",
+			"tmp/file1.feature",
 			func() {
 				content := []byte(`Feature: test feature
 
@@ -253,9 +253,9 @@ Examples:
   |[1,    2,   3]                         |
 `)
 
-				assert.NoError(t, os.RemoveAll("./tmp/"))
-				assert.NoError(t, os.MkdirAll("./tmp/", 0o777))
-				assert.NoError(t, os.WriteFile("./tmp/file1.feature", content, 0o777))
+				assert.NoError(t, os.RemoveAll("tmp/"))
+				assert.NoError(t, os.MkdirAll("tmp/", 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o777))
 			},
 			func(err error) {
 				assert.NoError(t, err)
@@ -273,14 +273,14 @@ Examples:
       | [1,2,3]                           |
 `
 
-				b, e := os.ReadFile("./tmp/file1.feature")
+				b, e := os.ReadFile("tmp/file1.feature")
 				assert.NoError(t, e)
 				assert.EqualValues(t, content, string(b))
 			},
 		},
 		{
 			"format bullet points",
-			"./tmp/file1.feature",
+			"tmp/file1.feature",
 			func() {
 				content := []byte(`Feature: bullet points
 
@@ -292,9 +292,9 @@ When check formatting
 Then all is good
 `)
 
-				assert.NoError(t, os.RemoveAll("./tmp/"))
-				assert.NoError(t, os.MkdirAll("./tmp/", 0o777))
-				assert.NoError(t, os.WriteFile("./tmp/file1.feature", content, 0o777))
+				assert.NoError(t, os.RemoveAll("tmp/"))
+				assert.NoError(t, os.MkdirAll("tmp/", 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o777))
 			},
 			func(err error) {
 				assert.NoError(t, err)
@@ -309,14 +309,14 @@ Then all is good
     Then all is good
 `
 
-				b, e := os.ReadFile("./tmp/file1.feature")
+				b, e := os.ReadFile("tmp/file1.feature")
 				assert.NoError(t, e)
 				assert.EqualValues(t, content, string(b))
 			},
 		},
 		{
 			"format a folder",
-			"./tmp/",
+			"tmp/",
 			func() {
 				content := []byte(`Feature: test
   test
@@ -329,18 +329,18 @@ hello world
 """
 `)
 
-				assert.NoError(t, os.RemoveAll("./tmp/"))
-				assert.NoError(t, os.MkdirAll("./tmp/", 0o777))
-				assert.NoError(t, os.MkdirAll("./tmp/test1", 0o777))
-				assert.NoError(t, os.MkdirAll("./tmp/test2/test3", 0o777))
+				assert.NoError(t, os.RemoveAll("tmp/"))
+				assert.NoError(t, os.MkdirAll("tmp/", 0o777))
+				assert.NoError(t, os.MkdirAll("tmp/test1", 0o777))
+				assert.NoError(t, os.MkdirAll("tmp/test2/test3", 0o777))
 
 				for i, f := range []string{
-					"./tmp/file1.feature",
-					"./tmp/file2.feature",
-					"./tmp/test1/file3.feature",
-					"./tmp/test1/file4.feature",
-					"./tmp/test2/test3/file5.feature",
-					"./tmp/test2/test3/file6.feature",
+					"tmp/file1.feature",
+					"tmp/file2.feature",
+					"tmp/test1/file3.feature",
+					"tmp/test1/file4.feature",
+					"tmp/test2/test3/file5.feature",
+					"tmp/test2/test3/file6.feature",
 				} {
 					assert.NoError(t, os.WriteFile(f, []byte(fmt.Sprintf(string(content), i)), 0o777))
 				}
@@ -360,12 +360,12 @@ hello world
 `
 
 				for i, f := range []string{
-					"./tmp/file1.feature",
-					"./tmp/file2.feature",
-					"./tmp/test1/file3.feature",
-					"./tmp/test1/file4.feature",
-					"./tmp/test2/test3/file5.feature",
-					"./tmp/test2/test3/file6.feature",
+					"tmp/file1.feature",
+					"tmp/file2.feature",
+					"tmp/test1/file3.feature",
+					"tmp/test1/file4.feature",
+					"tmp/test2/test3/file5.feature",
+					"tmp/test2/test3/file6.feature",
 				} {
 					b, e := os.ReadFile(f)
 					assert.NoError(t, e)
@@ -375,7 +375,7 @@ hello world
 		},
 		{
 			"format a folder with parsing errors",
-			"./tmp/",
+			"tmp/",
 			func() {
 				content := []byte(`Feature: test
       test
@@ -388,15 +388,15 @@ hello world
 """
 `)
 
-				assert.NoError(t, os.RemoveAll("/tmp/ghokin"))
-				assert.NoError(t, os.MkdirAll("/tmp/ghokin", 0o777))
-				assert.NoError(t, os.MkdirAll("./tmp/test1", 0o777))
+				assert.NoError(t, os.RemoveAll("tmp"))
+				assert.NoError(t, os.MkdirAll("tmp", 0o777))
+				assert.NoError(t, os.MkdirAll("tmp/test1", 0o777))
 
-				assert.NoError(t, os.WriteFile("./tmp/file1.feature", content, 0o777))
-				assert.NoError(t, os.WriteFile("./tmp/file2.feature", append([]byte("whatever"), content...), 0o777))
-				assert.NoError(t, os.WriteFile("./tmp/test1/file3.feature", content, 0o777))
-				assert.NoError(t, os.WriteFile("./tmp/test1/file4.feature", content, 0o777))
-				assert.NoError(t, os.WriteFile("./tmp/test1/file5.feature", append([]byte("something"), content...), 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file2.feature", append([]byte("whatever"), content...), 0o777))
+				assert.NoError(t, os.WriteFile("tmp/test1/file3.feature", content, 0o777))
+				assert.NoError(t, os.WriteFile("tmp/test1/file4.feature", content, 0o777))
+				assert.NoError(t, os.WriteFile("tmp/test1/file5.feature", append([]byte("something"), content...), 0o777))
 			},
 			func(err error) {
 				assert.NoError(t, err)
@@ -410,9 +410,9 @@ hello world
 				}
 
 				i := 0
-				for _, err := range expectedErrs {
+				for _, expectedErr := range expectedErrs {
 					for _, e := range errs {
-						if err == e {
+						if expectedErr == e {
 							i++
 						}
 					}
@@ -424,12 +424,12 @@ hello world
 		},
 		{
 			"format folder with no feature files",
-			"./tmp/",
+			"tmp/",
 			func() {
-				assert.NoError(t, os.RemoveAll("./tmp/"))
-				assert.NoError(t, os.MkdirAll("./tmp/", 0o777))
-				assert.NoError(t, os.WriteFile("./tmp/file1.txt", []byte("file1"), 0o777))
-				assert.NoError(t, os.WriteFile("./tmp/file2.txt", []byte("file2"), 0o777))
+				assert.NoError(t, os.RemoveAll("tmp/"))
+				assert.NoError(t, os.MkdirAll("tmp/", 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file1.txt", []byte("file1"), 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file2.txt", []byte("file2"), 0o777))
 			},
 			func(err error) {
 				assert.NoError(t, err)
@@ -446,7 +446,7 @@ hello world
 		},
 		{
 			"format an invalid file",
-			"fixtures/invalid.feature",
+			"features/invalid.feature",
 			func() {},
 			func(err error) {
 				assert.Error(t, err)
@@ -461,7 +461,247 @@ hello world
 			scenario.test(f.FormatAndReplace(scenario.path))
 			// Cleanup
 			buff.Reset()
-			_ = os.RemoveAll("./tmp/")
+			_ = os.RemoveAll("tmp/")
+		})
+	}
+}
+
+func TestFileManagerCheck(t *testing.T) {
+	type scenario struct {
+		testName string
+		path     string
+		setup    func()
+		test     func(error)
+	}
+
+	scenarios := []scenario{
+		{
+			"Check a file wrongly formatted",
+			"tmp/file1.feature",
+			func() {
+				content := []byte(`Feature: test
+   test
+
+Scenario:            scenario1
+   Given       whatever
+   Then                  whatever
+"""
+hello world
+"""
+`)
+
+				assert.NoError(t, os.RemoveAll("tmp"))
+				assert.NoError(t, os.MkdirAll("tmp", 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o777))
+			},
+			func(err error) {
+				assert.Error(t, err)
+				assert.EqualError(t, err, `an error occurred with file "tmp/file1.feature" : file is not properly formatted`)
+			},
+		},
+		{
+			"Check a file correctly formatted",
+			"tmp/file1.feature",
+			func() {
+				content := []byte(`Feature: test
+
+  Scenario: scenario
+    Given whatever
+    Then whatever
+      """
+      hello world
+      """
+`)
+
+				assert.NoError(t, os.RemoveAll("tmp"))
+				assert.NoError(t, os.MkdirAll("tmp", 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o777))
+			},
+			func(err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			testName: "Check a folder is wrongly formatted",
+			path:     "tmp/",
+			setup: func() {
+				content := []byte(`Feature: test
+   test
+
+Scenario:   scenario%d
+   Given           whatever
+   Then      whatever
+"""
+hello world
+"""
+`)
+
+				assert.NoError(t, os.RemoveAll("tmp"))
+				assert.NoError(t, os.MkdirAll("tmp", 0o777))
+				assert.NoError(t, os.MkdirAll("tmp/test1", 0o777))
+				assert.NoError(t, os.MkdirAll("tmp/test2/test3", 0o777))
+
+				for i, f := range []string{
+					"tmp/file1.feature",
+					"tmp/file2.feature",
+					"tmp/test1/file3.feature",
+					"tmp/test1/file4.feature",
+					"tmp/test2/test3/file5.feature",
+					"tmp/test2/test3/file6.feature",
+				} {
+					assert.NoError(t, os.WriteFile(f, []byte(fmt.Sprintf(string(content), i)), 0o777))
+				}
+			},
+			test: func(err error) {
+				assert.NoError(t, err)
+				errs := strings.Split(buff.String(), "\n")
+
+				expectedErrs := []string{
+					`an error occurred with file "tmp/file1.feature" : file is not properly formatted`,
+					`an error occurred with file "tmp/file2.feature" : file is not properly formatted`,
+					`an error occurred with file "tmp/test1/file3.feature" : file is not properly formatted`,
+					`an error occurred with file "tmp/test1/file4.feature" : file is not properly formatted`,
+					`an error occurred with file "tmp/test2/test3/file5.feature" : file is not properly formatted`,
+					`an error occurred with file "tmp/test2/test3/file6.feature" : file is not properly formatted`,
+				}
+
+				i := 0
+				for _, expectedErr := range expectedErrs {
+					for _, e := range errs {
+						if expectedErr == e {
+							i++
+						}
+					}
+				}
+				if l := len(expectedErrs); i != l {
+					assert.Fail(t, fmt.Sprintf("Must fail with %v files when formatting folder", l))
+				}
+			},
+		},
+		{
+			"Check a folder is correctly formatted",
+			"tmp/",
+			func() {
+				content := []byte(`Feature: test
+
+  Scenario: scenario%d
+    Given whatever
+    Then whatever
+      """
+      hello world
+      """
+`)
+
+				assert.NoError(t, os.RemoveAll("tmp"))
+				assert.NoError(t, os.MkdirAll("tmp", 0o777))
+				assert.NoError(t, os.MkdirAll("tmp/test1", 0o777))
+				assert.NoError(t, os.MkdirAll("tmp/test2/test3", 0o777))
+
+				for i, f := range []string{
+					"tmp/file1.feature",
+					"tmp/file2.feature",
+					"tmp/test1/file3.feature",
+					"tmp/test1/file4.feature",
+					"tmp/test2/test3/file5.feature",
+					"tmp/test2/test3/file6.feature",
+				} {
+					assert.NoError(t, os.WriteFile(f, []byte(fmt.Sprintf(string(content), i)), 0o777))
+				}
+			},
+			func(err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			"Check a folder with parsing errors",
+			"tmp/",
+			func() {
+				content := []byte(`Feature: test
+
+  Scenario: scenario
+    Given whatever
+    Then whatever
+      """
+      hello world
+      """
+`)
+
+				assert.NoError(t, os.RemoveAll("tmp"))
+				assert.NoError(t, os.MkdirAll("tmp", 0o777))
+				assert.NoError(t, os.MkdirAll("tmp/test1", 0o777))
+
+				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file2.feature", append([]byte("whatever"), content...), 0o777))
+				assert.NoError(t, os.WriteFile("tmp/test1/file3.feature", content, 0o777))
+				assert.NoError(t, os.WriteFile("tmp/test1/file4.feature", content, 0o777))
+				assert.NoError(t, os.WriteFile("tmp/test1/file5.feature", append([]byte("something"), content...), 0o777))
+			},
+			func(err error) {
+				assert.NoError(t, err)
+				errs := strings.Split(buff.String(), "\n")
+
+				expectedErrs := []string{
+					`an error occurred with file "tmp/file2.feature" : Parser errors:`,
+					`(1:1): expected: #EOF, #Language, #TagLine, #FeatureLine, #Comment, #Empty, got 'whateverFeature: test'`,
+					`an error occurred with file "tmp/test1/file5.feature" : Parser errors:`,
+					`(1:1): expected: #EOF, #Language, #TagLine, #FeatureLine, #Comment, #Empty, got 'whateverFeature: test'`,
+				}
+
+				i := 0
+				for _, expectedErr := range expectedErrs {
+					for _, e := range errs {
+						if expectedErr == e {
+							i++
+						}
+					}
+				}
+				if l := len(expectedErrs); i != l {
+					assert.Fail(t, fmt.Sprintf("Must fail with %v files when formatting folder", l))
+				}
+			},
+		},
+		{
+			"Check folder with no feature files",
+			"tmp",
+			func() {
+				assert.NoError(t, os.RemoveAll("tmp"))
+				assert.NoError(t, os.MkdirAll("tmp", 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file1.txt", []byte("file1"), 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file2.txt", []byte("file2"), 0o777))
+			},
+			func(err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			"Check an unexisting folder",
+			"whatever/whatever",
+			func() {},
+			func(err error) {
+				assert.Error(t, err)
+				assert.EqualError(t, err, "stat whatever/whatever: no such file or directory")
+			},
+		},
+		{
+			"Check an invalid file",
+			"features/invalid.feature",
+			func() {},
+			func(err error) {
+				assert.Error(t, err)
+			},
+		},
+	}
+
+	for _, scenario := range scenarios {
+		t.Run(scenario.testName, func(t *testing.T) {
+			scenario.setup()
+
+			f := NewFileManager(2, BuffLogger{})
+
+			scenario.test(f.Check(scenario.path))
+			// Cleanup
+			buff.Reset()
+			_ = os.RemoveAll("tmp/")
 		})
 	}
 }

@@ -2,7 +2,7 @@ Augurken is a tool to format [Gherkin](https://cucumber.io/docs/gherkin/referenc
 
 # Install<a id="install"></a>
 
-Download the latest binary for your achitecture [here](https://github.com/judimator/augurken/releases/latest).
+Download the latest binary for your architecture [here](https://github.com/judimator/augurken/releases/latest).
 
 # Usage<a id="usage"></a>
 
@@ -11,12 +11,15 @@ Usage:
   augurken [command]
 
 Available Commands:
-  format           Format a feature file/folder
+  check       Check formatting of gherkin file(s)
+  completion  Generate the autocompletion script for the specified shell
+  format      Format gherkin file(s)
+  help        Help about any command
 
 Flags:
-  -h, --help       Help
-  -i, --indent     Indent 
-      --version    Current Augurken version 
+  -h, --help         help for augurken
+  -i, --indent int   set the indentation for Gherkin features (default 2)
+  -v, --version      version for augurken
  
 Use "augurken [command] --help" for more information about a command.
 ```
@@ -113,3 +116,7 @@ Feature: The feature
 # Contribute<a id="contribute"></a>
 
 If you want to add a new feature, open an issue with proposal
+
+# Acknowledgements
+
+Thanks [antham](https://github.com/antham) for the idea and some functions. Also, some functions got from [here](https://github.com/antham/ghokin) and official Go encoding [library](https://github.com/golang/go/tree/master/src/encoding/json)

@@ -1,4 +1,4 @@
-package format
+package check
 
 import (
 	"errors"
@@ -10,8 +10,8 @@ import (
 func NewCommand(logger formatter.Log) *cobra.Command {
 	var indent int
 	cmd := &cobra.Command{
-		Use:   "format [file or path]",
-		Short: "Format gherkin file(s)",
+		Use:   "check [file or path]",
+		Short: "Check formatting of gherkin file(s)",
 		Args:  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
@@ -20,9 +20,10 @@ func NewCommand(logger formatter.Log) *cobra.Command {
 
 			indent, _ := cmd.Flags().GetInt("indent")
 			fileManager := formatter.NewFileManager(indent, logger)
-			if err := fileManager.FormatAndReplace(args[0]); err != nil {
+			if err := fileManager.Check(args[0]); err != nil {
 				return err
 			}
+
 			return nil
 		},
 	}
