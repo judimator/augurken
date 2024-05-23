@@ -53,6 +53,7 @@ func (c *ContentHelper) removeBom(content []byte) []byte {
 	if len(c.bom) > 0 {
 		return content[3:]
 	}
+
 	return content
 }
 
@@ -64,17 +65,22 @@ func (c *ContentHelper) addBom(content []byte) []byte {
 // detectEOL checks a content to find out what is the line separator in the content
 func (c *ContentHelper) detectEOL(content []byte) {
 	c.eol = noEol
+
 	var previousChar byte
+
 	for _, char := range content {
 		switch {
 		case previousChar == '\r' && char == '\n':
 			c.eol = crlf
+
 			return
-		case previousChar == '\r' && char != '\n':
+		case previousChar == '\r':
 			c.eol = cr
+
 			return
 		case char == '\n':
 			c.eol = lf
+
 			return
 		}
 		previousChar = char

@@ -12,7 +12,7 @@ import (
 	augurkenjson "github.com/judimator/augurken/json"
 )
 
-func format(token *token, indent int) ([]byte, error) {
+func format(token *token, indent int) []byte {
 	paddings := map[gherkin.TokenType]int{
 		gherkin.TokenTypeFeatureLine:        0,
 		gherkin.TokenTypeBackgroundLine:     indent,
@@ -39,9 +39,12 @@ func format(token *token, indent int) ([]byte, error) {
 		gherkin.TokenTypeEmpty:              extractTokensItemsText,
 	}
 
-	var document []string
 	optionalRulePadding := 0
-	var accumulator []*gherkin.Token
+
+	var (
+		document    []string
+		accumulator []*gherkin.Token
+	)
 
 	for tok := token; tok != nil; tok = tok.nex {
 		values := tok.values
@@ -49,9 +52,10 @@ func format(token *token, indent int) ([]byte, error) {
 		if len(accumulator) > 0 &&
 			tok.kind == gherkin.TokenTypeTableRow &&
 			(tok.nex != nil && tok.nex.kind != gherkin.TokenTypeComment) || tok.nex == nil {
-			values = append(accumulator, tok.values...)
+			values = append(accumulator, tok.values...) //nolint:gocritic
 			accumulator = []*gherkin.Token{}
 		}
+
 		if tok.kind == gherkin.TokenTypeTableRow &&
 			tok.nex != nil &&
 			tok.nex.kind == gherkin.TokenTypeComment &&
@@ -60,8 +64,10 @@ func format(token *token, indent int) ([]byte, error) {
 			len(accumulator) > 0 && tok.kind == gherkin.TokenTypeComment ||
 			len(accumulator) > 0 && tok.kind == gherkin.TokenTypeTableRow {
 			accumulator = append(accumulator, tok.values...)
+
 			continue
 		}
+
 		if tok.kind == 0 {
 			continue
 		}
@@ -69,17 +75,18 @@ func format(token *token, indent int) ([]byte, error) {
 		padding := paddings[tok.kind] + optionalRulePadding
 		lines := formats[tok.kind](values)
 
-		if tok.kind == gherkin.TokenTypeRuleLine {
+		switch tok.kind { //nolint:exhaustive
+		case gherkin.TokenTypeRuleLine:
 			optionalRulePadding = indent
 			padding = indent
-		} else if tok.kind == gherkin.TokenTypeComment {
+		case gherkin.TokenTypeComment:
 			padding = getTagOrCommentPadding(paddings, indent, tok)
 			lines = trimLinesSpace(lines)
-		} else if tok.kind == gherkin.TokenTypeTagLine {
+		case gherkin.TokenTypeTagLine:
 			padding = getTagOrCommentPadding(paddings, indent, tok)
-		} else if tok.kind == gherkin.TokenTypeDocStringSeparator {
+		case gherkin.TokenTypeDocStringSeparator:
 			lines = extractKeyword(tok.values)
-		} else if tok.kind == gherkin.TokenTypeOther {
+		case gherkin.TokenTypeOther:
 			if isDescriptionFeature(tok) {
 				padding = indent
 			} else if tok.prev.kind == gherkin.TokenTypeDocStringSeparator &&
@@ -91,11 +98,11 @@ func format(token *token, indent int) ([]byte, error) {
 				prefixSpace := strings.Repeat(" ", padding)
 				indentSpace := strings.Repeat(" ", indent)
 
-				if ok := augurkenjson.Valid(source); ok == true {
-					_ = augurkenjson.Indent(&buffer, source, prefixSpace, indentSpace)
-					lines = []string{string(buffer.Bytes())}
-				}
 				// TODO: Handle json error and print col and line
+				if ok := augurkenjson.Valid(source); ok {
+					_ = augurkenjson.Indent(&buffer, source, prefixSpace, indentSpace)
+					lines = []string{buffer.String()}
+				}
 			}
 
 			lines = trimLinesSpace(lines)
@@ -103,17 +110,20 @@ func format(token *token, indent int) ([]byte, error) {
 
 		document = append(document, trimExtraTrailingSpace(indentStrings(padding, lines))...)
 	}
-	return []byte(strings.Join(document, "\n") + "\n"), nil
+
+	return []byte(strings.Join(document, "\n") + "\n")
 }
 
 func getTagOrCommentPadding(paddings map[gherkin.TokenType]int, indent int, tok *token) int {
 	var kind gherkin.TokenType
 	excluded := []gherkin.TokenType{gherkin.TokenTypeTagLine, gherkin.TokenTypeComment}
+
 	if tok.next(excluded) != nil {
 		if s := tok.next(excluded); s != nil {
 			kind = s.kind
 		}
 	}
+
 	if kind == 0 && tok.previous(excluded) != nil {
 		if s := tok.previous(excluded); s != nil {
 			kind = s.kind
@@ -123,6 +133,7 @@ func getTagOrCommentPadding(paddings map[gherkin.TokenType]int, indent int, tok 
 	if tok.next([]gherkin.TokenType{gherkin.TokenTypeEmpty}) == nil {
 		return indent
 	}
+
 	return paddings[kind]
 }
 
@@ -133,74 +144,85 @@ func isDescriptionFeature(tok *token) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
 func trimLinesSpace(lines []string) []string {
-	var content []string
+	content := []string{}
 	for _, line := range lines {
 		content = append(content, strings.TrimSpace(line))
 	}
+
 	return content
 }
 
 func trimExtraTrailingSpace(lines []string) []string {
-	var content []string
+	content := []string{}
 	for _, line := range lines {
 		content = append(content, strings.TrimRight(line, " \t"))
 	}
+
 	return content
 }
 
 func indentStrings(padding int, lines []string) []string {
-	var content []string
+	content := []string{}
 	for _, line := range lines {
 		content = append(content, strings.Repeat(" ", padding)+line)
 	}
+
 	return content
 }
 
 func extractTokensText(tokens []*gherkin.Token) []string {
-	var content []string
+	content := []string{}
 	for _, token := range tokens {
 		content = append(content, token.Text)
 	}
+
 	return content
 }
 
 func extractTokensItemsText(tokens []*gherkin.Token) []string {
-	var content []string
+	content := []string{}
+
 	for _, token := range tokens {
 		var t []string
 		for _, item := range token.Items {
 			t = append(t, item.Text)
 		}
+
 		content = append(content, strings.Join(t, " "))
 	}
+
 	return content
 }
 
 func extractTokensKeywordAndText(tokens []*gherkin.Token) []string {
-	var content []string
+	content := []string{}
 	for _, token := range tokens {
 		content = append(content, fmt.Sprintf("%s%s", token.Keyword, token.Text))
 	}
+
 	return content
 }
 
 func extractKeywordAndTextSeparatedWithAColon(tokens []*gherkin.Token) []string {
-	var content []string
+	content := []string{}
 	for _, token := range tokens {
 		content = append(content, fmt.Sprintf("%s: %s", token.Keyword, token.Text))
 	}
+
 	return content
 }
 
 func extractKeyword(tokens []*gherkin.Token) []string {
-	var content []string
+	content := []string{}
 	for _, t := range tokens {
 		content = append(content, t.Keyword)
 	}
+
 	return content
 }
 
@@ -210,8 +232,9 @@ func extractTableRowsAndComments(tokens []*gherkin.Token) []string {
 		kind    gherkin.TokenType
 	}
 
-	var rows [][]string
-	var tableElements []tableElement
+	rows := [][]string{}
+	tableElements := []tableElement{}
+
 	for _, token := range tokens {
 		element := tableElement{}
 
@@ -220,11 +243,12 @@ func extractTableRowsAndComments(tokens []*gherkin.Token) []string {
 			element.content = []string{token.Text}
 		} else {
 			var row []string
+
 			for _, data := range token.Items {
 				var text string
 
 				source := []byte(data.Text)
-				if ok := json.Valid(source); ok == true {
+				if ok := json.Valid(source); ok {
 					var buffer bytes.Buffer
 					_ = json.Compact(&buffer, source)
 					text = buffer.String()
@@ -234,7 +258,6 @@ func extractTableRowsAndComments(tokens []*gherkin.Token) []string {
 
 				// A remaining pipe means it was escaped before to not be messed with pipe column delimiter
 				// so here we introduce the escaping sequence back
-				text = strings.ReplaceAll(text, "\\", "\\\\")
 				text = strings.ReplaceAll(text, "\n", "\\n")
 				text = strings.ReplaceAll(text, "|", "\\|")
 				row = append(row, text)
@@ -243,11 +266,13 @@ func extractTableRowsAndComments(tokens []*gherkin.Token) []string {
 			element.content = row
 			rows = append(rows, row)
 		}
+
 		tableElements = append(tableElements, element)
 	}
 
-	var tableRows []string
+	tableRows := []string{}
 	lengths := calculateLonguestLineLengthPerColumn(rows)
+
 	for _, tableElement := range tableElements {
 		var inputs []interface{}
 		fmtDirective := ""
@@ -260,26 +285,31 @@ func extractTableRowsAndComments(tokens []*gherkin.Token) []string {
 				inputs = append(inputs, str)
 				fmtDirective += "| %-" + strconv.Itoa(lengths[i]) + "s "
 			}
+
 			fmtDirective += "|"
 		}
+
 		tableRows = append(tableRows, fmt.Sprintf(fmtDirective, inputs...))
 	}
+
 	return tableRows
 }
 
 func calculateLonguestLineLengthPerColumn(rows [][]string) []int {
 	var lengths []int
+
 	for i, row := range rows {
 		for j, str := range row {
-			switch true {
+			switch {
 			case i == 0:
 				lengths = append(lengths, utf8.RuneCountInString(str))
-			case i != 0 && len(lengths) > j && lengths[j] < utf8.RuneCountInString(str):
+			case len(lengths) > j && lengths[j] < utf8.RuneCountInString(str):
 				lengths[j] = utf8.RuneCountInString(str)
 			default:
 				lengths = append(lengths, 0)
 			}
 		}
 	}
+
 	return lengths
 }

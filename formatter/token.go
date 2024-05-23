@@ -14,11 +14,12 @@ func (t *node) Build(tok *gherkin.Token) (bool, error) {
 	if tok == nil {
 		return false, errors.New("token is not defined")
 	}
+
 	if tok.IsEOF() {
 		return true, nil
 	}
 
-	switch true {
+	switch {
 	case t.token == nil:
 		t.token = &token{kind: tok.Type, values: []*gherkin.Token{}}
 	case tok.Type != t.token.kind:
@@ -31,11 +32,11 @@ func (t *node) Build(tok *gherkin.Token) (bool, error) {
 	return true, nil
 }
 
-func (t *node) StartRule(r gherkin.RuleType) (bool, error) {
+func (t *node) StartRule(_ gherkin.RuleType) (bool, error) {
 	return true, nil
 }
 
-func (t *node) EndRule(r gherkin.RuleType) (bool, error) {
+func (t *node) EndRule(_ gherkin.RuleType) (bool, error) {
 	return true, nil
 }
 
@@ -55,6 +56,7 @@ func (t *token) isExcluded(kind gherkin.TokenType, excluded []gherkin.TokenType)
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -64,6 +66,7 @@ func (t *token) previous(excluded []gherkin.TokenType) *token {
 			return tok
 		}
 	}
+
 	return nil
 }
 
@@ -73,5 +76,6 @@ func (t *token) next(excluded []gherkin.TokenType) *token {
 			return tok
 		}
 	}
+
 	return nil
 }

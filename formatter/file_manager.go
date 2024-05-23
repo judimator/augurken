@@ -15,7 +15,6 @@ import (
 
 type FileManager struct {
 	indent int
-	logger Log
 }
 
 type ProcessFileError struct {
@@ -27,18 +26,19 @@ func (p ProcessFileError) Error() string {
 	return fmt.Sprintf(`an error occurred with file "%s" : %s`, p.File, p.Message)
 }
 
-func NewFileManager(indent int, logger Log) FileManager {
+func NewFileManager(indent int) FileManager {
 	return FileManager{
 		indent,
-		logger,
 	}
 }
 
-func (f FileManager) FormatAndReplace(path string) error {
+// FormatAndReplace Format and replace file or path. The function must return either []string or []error
+func (f FileManager) FormatAndReplace(path string) []interface{} {
 	return f.process(path, replaceFileWithContent)
 }
 
-func (f FileManager) Check(path string) error {
+// Check Test file or path. The function must return either []string or []error
+func (f FileManager) Check(path string) []interface{} {
 	return f.process(path, check)
 }
 
@@ -54,6 +54,7 @@ func (f FileManager) Format(filename string) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
+
 	if result.Charset != "UTF-8" {
 		r, err := charset.NewReaderLabel(result.Charset, bytes.NewBuffer(content))
 		if err != nil {
@@ -75,80 +76,86 @@ func (f FileManager) Format(filename string) ([]byte, error) {
 		return []byte{}, err
 	}
 
-	content, err = format(token, f.indent)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	return contentHelper.Restore(content), nil
+	return contentHelper.Restore(format(token, f.indent)), nil
 }
 
-func (f FileManager) process(path string, processFn func(file string, content []byte) error) error {
+// process Handle file or path depends on processFn value. The function must return either []string or []error
+func (f FileManager) process(path string, processFn func(file string, content []byte) error) []interface{} {
+	var result []interface{}
 	fi, err := os.Stat(path)
+
 	if err != nil {
-		return err
+		return append(result, err)
 	}
 
 	switch mode := fi.Mode(); {
 	case mode.IsDir():
-		if err := f.processPath(path, processFn); err != nil {
-			return err
-		}
+		result = append(result, f.processPath(path, processFn)...)
 	case mode.IsRegular():
 		b, err := f.Format(path)
 		if err != nil {
-			return err
+			return append(result, err)
 		}
 
 		if err := processFn(path, b); err != nil {
-			return err
+			return append(result, err)
 		}
 
-		f.logger.Success(fmt.Sprint("+", path))
+		result = append(result, fmt.Sprint("formatted: ", path))
 	}
-	return nil
+
+	return result
 }
 
-func (f FileManager) processPath(path string, processFn func(file string, content []byte) error) error {
+// processPath Handle path depends on processFn value. The function must return either []string or []error
+func (f FileManager) processPath(path string, processFn func(file string, content []byte) error) []interface{} {
+	var result []interface{}
 	fc := make(chan string)
 	wg := sync.WaitGroup{}
 
 	files, err := findFeatureFiles(path)
 	if err != nil {
-		return err
+		return append(result, err)
 	}
+
 	if len(files) == 0 {
-		return nil
+		return result
 	}
 
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
+
 		go func() {
 			for file := range fc {
 				b, err := f.Format(file)
 
 				if err != nil {
-					f.logger.Error(ProcessFileError{Message: err.Error(), File: file})
+					result = append(result, ProcessFileError{Message: err.Error(), File: file})
+
 					continue
 				}
 
 				if err := processFn(file, b); err != nil {
-					f.logger.Error(err)
+					result = append(result, err)
+
 					continue
 				}
 
-				f.logger.Success(fmt.Sprint("formatted: ", file))
+				result = append(result, fmt.Sprint("formatted: ", file))
 			}
+
 			wg.Done()
 		}()
 	}
+
 	for _, file := range files {
 		fc <- file
 	}
 
 	close(fc)
 	wg.Wait()
-	return nil
+
+	return result
 }
 
 func replaceFileWithContent(file string, content []byte) error {
@@ -170,14 +177,17 @@ func check(file string, content []byte) error {
 	if err != nil {
 		return ProcessFileError{Message: err.Error(), File: file}
 	}
+
 	if !bytes.Equal(currentContent, content) {
 		return ProcessFileError{Message: "file is not properly formatted", File: file}
 	}
+
 	return nil
 }
 
 func findFeatureFiles(rootPath string) ([]string, error) {
 	var files []string
+
 	if err := filepath.Walk(rootPath, func(p string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -191,5 +201,6 @@ func findFeatureFiles(rootPath string) ([]string, error) {
 	}); err != nil {
 		return []string{}, err
 	}
+
 	return files, nil
 }

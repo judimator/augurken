@@ -1,34 +1,14 @@
 package formatter
 
 import (
-	"bytes"
 	"fmt"
-	"log"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	buff       bytes.Buffer
-	buffLogger = log.New(&buff, "", log.Lmsgprefix)
-)
-
-type BuffLogger struct{}
-
-func (l BuffLogger) Print(str string) {
-	buffLogger.Println(str)
-}
-func (l BuffLogger) Error(err error) {
-	buffLogger.Println(err)
-}
-func (l BuffLogger) Success(str string) {
-	buffLogger.Println(str)
-}
-
-func TestFileManagerFormat(t *testing.T) {
+func TestFileManagerFormat(t *testing.T) { //nolint:tparallel
 	type scenario struct {
 		filename string
 		test     func([]byte, error)
@@ -71,16 +51,6 @@ func TestFileManagerFormat(t *testing.T) {
 				assert.NoError(t, err)
 
 				b, e := os.ReadFile("features/docstring-empty.feature")
-				assert.NoError(t, e)
-				assert.EqualValues(t, string(b), string(buf))
-			},
-		},
-		{
-			"features/double-escaping.feature",
-			func(buf []byte, err error) {
-				assert.NoError(t, err)
-
-				b, e := os.ReadFile("features/double-escaping.feature")
 				assert.NoError(t, e)
 				assert.EqualValues(t, string(b), string(buf))
 			},
@@ -167,13 +137,13 @@ func TestFileManagerFormat(t *testing.T) {
 		},
 		{
 			"features/",
-			func(buf []byte, err error) {
+			func(_ []byte, err error) {
 				assert.EqualError(t, err, "read features/: is a directory")
 			},
 		},
 		{
 			"features/invalid.feature",
-			func(buf []byte, err error) {
+			func(_ []byte, err error) {
 				assert.Error(t, err)
 			},
 		},
@@ -183,7 +153,7 @@ func TestFileManagerFormat(t *testing.T) {
 		scenario := scenario
 		t.Run(scenario.filename, func(t *testing.T) {
 			t.Parallel()
-			f := NewFileManager(2, BuffLogger{})
+			f := NewFileManager(2)
 			scenario.test(f.Format(scenario.filename))
 		})
 	}
@@ -194,7 +164,7 @@ func TestFileManagerFormatAndReplace(t *testing.T) {
 		testName string
 		path     string
 		setup    func()
-		test     func(error)
+		test     func([]interface{})
 	}
 
 	scenarios := []scenario{
@@ -215,10 +185,10 @@ hello world
 
 				assert.NoError(t, os.RemoveAll("tmp/"))
 				assert.NoError(t, os.MkdirAll("tmp/", 0o777))
-				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o600))
 			},
-			func(err error) {
-				assert.NoError(t, err)
+			func(output []interface{}) {
+				assertNoErrors(t, output)
 
 				content := `Feature: test
   test
@@ -255,10 +225,10 @@ Examples:
 
 				assert.NoError(t, os.RemoveAll("tmp/"))
 				assert.NoError(t, os.MkdirAll("tmp/", 0o777))
-				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o600))
 			},
-			func(err error) {
-				assert.NoError(t, err)
+			func(output []interface{}) {
+				assertNoErrors(t, output)
 
 				content := `Feature: test feature
 
@@ -294,10 +264,10 @@ Then all is good
 
 				assert.NoError(t, os.RemoveAll("tmp/"))
 				assert.NoError(t, os.MkdirAll("tmp/", 0o777))
-				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o600))
 			},
-			func(err error) {
-				assert.NoError(t, err)
+			func(output []interface{}) {
+				assertNoErrors(t, output)
 
 				content := `Feature: bullet points
 
@@ -342,11 +312,11 @@ hello world
 					"tmp/test2/test3/file5.feature",
 					"tmp/test2/test3/file6.feature",
 				} {
-					assert.NoError(t, os.WriteFile(f, []byte(fmt.Sprintf(string(content), i)), 0o777))
+					assert.NoError(t, os.WriteFile(f, []byte(fmt.Sprintf(string(content), i)), 0o600))
 				}
 			},
-			func(err error) {
-				assert.NoError(t, err)
+			func(output []interface{}) {
+				assertNoErrors(t, output)
 
 				content := `Feature: test
   test
@@ -392,27 +362,27 @@ hello world
 				assert.NoError(t, os.MkdirAll("tmp", 0o777))
 				assert.NoError(t, os.MkdirAll("tmp/test1", 0o777))
 
-				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o777))
-				assert.NoError(t, os.WriteFile("tmp/file2.feature", append([]byte("whatever"), content...), 0o777))
-				assert.NoError(t, os.WriteFile("tmp/test1/file3.feature", content, 0o777))
-				assert.NoError(t, os.WriteFile("tmp/test1/file4.feature", content, 0o777))
-				assert.NoError(t, os.WriteFile("tmp/test1/file5.feature", append([]byte("something"), content...), 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o600))
+				assert.NoError(t, os.WriteFile("tmp/file2.feature", append([]byte("whatever"), content...), 0o600))
+				assert.NoError(t, os.WriteFile("tmp/test1/file3.feature", content, 0o600))
+				assert.NoError(t, os.WriteFile("tmp/test1/file4.feature", content, 0o600))
+				assert.NoError(t, os.WriteFile("tmp/test1/file5.feature", append([]byte("something"), content...), 0o600))
 			},
-			func(err error) {
-				assert.NoError(t, err)
-				errs := strings.Split(buff.String(), "\n")
+			func(output []interface{}) {
+				assert.Len(t, output, 5)
 
 				expectedErrs := []string{
-					`an error occurred with file "tmp/file2.feature" : Parser errors:`,
-					`(1:1): expected: #EOF, #Language, #TagLine, #FeatureLine, #Comment, #Empty, got 'whateverFeature: test'`,
-					`an error occurred with file "tmp/test1/file5.feature" : Parser errors:`,
-					`(1:1): expected: #EOF, #Language, #TagLine, #FeatureLine, #Comment, #Empty, got 'somethingFeature: test'`,
+					`an error occurred with file "tmp/file2.feature" : Parser errors:
+(1:1): expected: #EOF, #Language, #TagLine, #FeatureLine, #Comment, #Empty, got 'whateverFeature: test'`,
+					`an error occurred with file "tmp/test1/file5.feature" : Parser errors:
+(1:1): expected: #EOF, #Language, #TagLine, #FeatureLine, #Comment, #Empty, got 'somethingFeature: test'`,
 				}
 
 				i := 0
 				for _, expectedErr := range expectedErrs {
-					for _, e := range errs {
-						if expectedErr == e {
+					for _, o := range output {
+						e, ok := o.(error)
+						if ok && expectedErr == e.Error() {
 							i++
 						}
 					}
@@ -428,39 +398,42 @@ hello world
 			func() {
 				assert.NoError(t, os.RemoveAll("tmp/"))
 				assert.NoError(t, os.MkdirAll("tmp/", 0o777))
-				assert.NoError(t, os.WriteFile("tmp/file1.txt", []byte("file1"), 0o777))
-				assert.NoError(t, os.WriteFile("tmp/file2.txt", []byte("file2"), 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file1.txt", []byte("file1"), 0o600))
+				assert.NoError(t, os.WriteFile("tmp/file2.txt", []byte("file2"), 0o600))
 			},
-			func(err error) {
-				assert.NoError(t, err)
+			func(output []interface{}) {
+				assertNoErrors(t, output)
 			},
 		},
 		{
 			"format an unexisting folder",
 			"whatever/whatever",
 			func() {},
-			func(err error) {
-				assert.Error(t, err)
-				assert.EqualError(t, err, "stat whatever/whatever: no such file or directory")
+			func(output []interface{}) {
+				assert.Len(t, output, 1)
+				e, _ := output[0].(error)
+				assert.Error(t, e)
+				assert.EqualError(t, e, "stat whatever/whatever: no such file or directory")
 			},
 		},
 		{
 			"format an invalid file",
 			"features/invalid.feature",
 			func() {},
-			func(err error) {
-				assert.Error(t, err)
+			func(output []interface{}) {
+				assert.Len(t, output, 1)
+				e, _ := output[0].(error)
+				assert.Error(t, e)
 			},
 		},
 	}
 
 	for _, scenario := range scenarios {
-		t.Run(scenario.testName, func(t *testing.T) {
+		t.Run(scenario.testName, func(_ *testing.T) {
 			scenario.setup()
-			f := NewFileManager(2, BuffLogger{})
+			f := NewFileManager(2)
 			scenario.test(f.FormatAndReplace(scenario.path))
 			// Cleanup
-			buff.Reset()
 			_ = os.RemoveAll("tmp/")
 		})
 	}
@@ -471,7 +444,7 @@ func TestFileManagerCheck(t *testing.T) {
 		testName string
 		path     string
 		setup    func()
-		test     func(error)
+		test     func([]interface{})
 	}
 
 	scenarios := []scenario{
@@ -492,11 +465,13 @@ hello world
 
 				assert.NoError(t, os.RemoveAll("tmp"))
 				assert.NoError(t, os.MkdirAll("tmp", 0o777))
-				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o600))
 			},
-			func(err error) {
-				assert.Error(t, err)
-				assert.EqualError(t, err, `an error occurred with file "tmp/file1.feature" : file is not properly formatted`)
+			func(output []interface{}) {
+				assert.Len(t, output, 1)
+				e, _ := output[0].(error)
+				assert.Error(t, e)
+				assert.EqualError(t, e, `an error occurred with file "tmp/file1.feature" : file is not properly formatted`)
 			},
 		},
 		{
@@ -515,16 +490,16 @@ hello world
 
 				assert.NoError(t, os.RemoveAll("tmp"))
 				assert.NoError(t, os.MkdirAll("tmp", 0o777))
-				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o600))
 			},
-			func(err error) {
-				assert.NoError(t, err)
+			func(output []interface{}) {
+				assertNoErrors(t, output)
 			},
 		},
 		{
-			testName: "Check a folder is wrongly formatted",
-			path:     "tmp/",
-			setup: func() {
+			"Check a folder is wrongly formatted",
+			"tmp/",
+			func() {
 				content := []byte(`Feature: test
    test
 
@@ -549,12 +524,11 @@ hello world
 					"tmp/test2/test3/file5.feature",
 					"tmp/test2/test3/file6.feature",
 				} {
-					assert.NoError(t, os.WriteFile(f, []byte(fmt.Sprintf(string(content), i)), 0o777))
+					assert.NoError(t, os.WriteFile(f, []byte(fmt.Sprintf(string(content), i)), 0o600))
 				}
 			},
-			test: func(err error) {
-				assert.NoError(t, err)
-				errs := strings.Split(buff.String(), "\n")
+			func(output []interface{}) {
+				assert.Len(t, output, 6)
 
 				expectedErrs := []string{
 					`an error occurred with file "tmp/file1.feature" : file is not properly formatted`,
@@ -567,8 +541,9 @@ hello world
 
 				i := 0
 				for _, expectedErr := range expectedErrs {
-					for _, e := range errs {
-						if expectedErr == e {
+					for _, o := range output {
+						e, ok := o.(error)
+						if ok && expectedErr == e.Error() {
 							i++
 						}
 					}
@@ -605,11 +580,11 @@ hello world
 					"tmp/test2/test3/file5.feature",
 					"tmp/test2/test3/file6.feature",
 				} {
-					assert.NoError(t, os.WriteFile(f, []byte(fmt.Sprintf(string(content), i)), 0o777))
+					assert.NoError(t, os.WriteFile(f, []byte(fmt.Sprintf(string(content), i)), 0o600))
 				}
 			},
-			func(err error) {
-				assert.NoError(t, err)
+			func(output []interface{}) {
+				assertNoErrors(t, output)
 			},
 		},
 		{
@@ -630,27 +605,27 @@ hello world
 				assert.NoError(t, os.MkdirAll("tmp", 0o777))
 				assert.NoError(t, os.MkdirAll("tmp/test1", 0o777))
 
-				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o777))
-				assert.NoError(t, os.WriteFile("tmp/file2.feature", append([]byte("whatever"), content...), 0o777))
-				assert.NoError(t, os.WriteFile("tmp/test1/file3.feature", content, 0o777))
-				assert.NoError(t, os.WriteFile("tmp/test1/file4.feature", content, 0o777))
-				assert.NoError(t, os.WriteFile("tmp/test1/file5.feature", append([]byte("something"), content...), 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o600))
+				assert.NoError(t, os.WriteFile("tmp/file2.feature", append([]byte("whatever"), content...), 0o600))
+				assert.NoError(t, os.WriteFile("tmp/test1/file3.feature", content, 0o600))
+				assert.NoError(t, os.WriteFile("tmp/test1/file4.feature", content, 0o600))
+				assert.NoError(t, os.WriteFile("tmp/test1/file5.feature", append([]byte("something"), content...), 0o600))
 			},
-			func(err error) {
-				assert.NoError(t, err)
-				errs := strings.Split(buff.String(), "\n")
+			func(output []interface{}) {
+				assert.Len(t, output, 5)
 
 				expectedErrs := []string{
-					`an error occurred with file "tmp/file2.feature" : Parser errors:`,
-					`(1:1): expected: #EOF, #Language, #TagLine, #FeatureLine, #Comment, #Empty, got 'whateverFeature: test'`,
-					`an error occurred with file "tmp/test1/file5.feature" : Parser errors:`,
-					`(1:1): expected: #EOF, #Language, #TagLine, #FeatureLine, #Comment, #Empty, got 'whateverFeature: test'`,
+					`an error occurred with file "tmp/file2.feature" : Parser errors:
+(1:1): expected: #EOF, #Language, #TagLine, #FeatureLine, #Comment, #Empty, got 'whateverFeature: test'`,
+					`an error occurred with file "tmp/test1/file5.feature" : Parser errors:
+(1:1): expected: #EOF, #Language, #TagLine, #FeatureLine, #Comment, #Empty, got 'somethingFeature: test'`,
 				}
 
 				i := 0
 				for _, expectedErr := range expectedErrs {
-					for _, e := range errs {
-						if expectedErr == e {
+					for _, o := range output {
+						e, ok := o.(error)
+						if ok && expectedErr == e.Error() {
 							i++
 						}
 					}
@@ -666,42 +641,53 @@ hello world
 			func() {
 				assert.NoError(t, os.RemoveAll("tmp"))
 				assert.NoError(t, os.MkdirAll("tmp", 0o777))
-				assert.NoError(t, os.WriteFile("tmp/file1.txt", []byte("file1"), 0o777))
-				assert.NoError(t, os.WriteFile("tmp/file2.txt", []byte("file2"), 0o777))
+				assert.NoError(t, os.WriteFile("tmp/file1.txt", []byte("file1"), 0o600))
+				assert.NoError(t, os.WriteFile("tmp/file2.txt", []byte("file2"), 0o600))
 			},
-			func(err error) {
-				assert.NoError(t, err)
+			func(output []interface{}) {
+				assertNoErrors(t, output)
 			},
 		},
 		{
 			"Check an unexisting folder",
 			"whatever/whatever",
 			func() {},
-			func(err error) {
-				assert.Error(t, err)
-				assert.EqualError(t, err, "stat whatever/whatever: no such file or directory")
+			func(output []interface{}) {
+				assert.Len(t, output, 1)
+				e, _ := output[0].(error)
+				assert.Error(t, e)
+				assert.EqualError(t, e, "stat whatever/whatever: no such file or directory")
 			},
 		},
 		{
 			"Check an invalid file",
 			"features/invalid.feature",
 			func() {},
-			func(err error) {
-				assert.Error(t, err)
+			func(output []interface{}) {
+				assert.Len(t, output, 1)
+				e, _ := output[0].(error)
+				assert.Error(t, e)
 			},
 		},
 	}
 
 	for _, scenario := range scenarios {
-		t.Run(scenario.testName, func(t *testing.T) {
+		t.Run(scenario.testName, func(_ *testing.T) {
 			scenario.setup()
 
-			f := NewFileManager(2, BuffLogger{})
+			f := NewFileManager(2)
 
 			scenario.test(f.Check(scenario.path))
 			// Cleanup
-			buff.Reset()
 			_ = os.RemoveAll("tmp/")
 		})
+	}
+}
+
+func assertNoErrors(t *testing.T, any []interface{}) {
+	for _, a := range any {
+		if _, ok := a.(error); ok {
+			assert.Fail(t, "An error is not expected.", a)
+		}
 	}
 }

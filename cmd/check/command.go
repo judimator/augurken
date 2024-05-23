@@ -4,10 +4,11 @@ import (
 	"errors"
 
 	"github.com/judimator/augurken/formatter"
+	"github.com/judimator/augurken/log"
 	"github.com/spf13/cobra"
 )
 
-func NewCommand(logger formatter.Log) *cobra.Command {
+func NewCommand() *cobra.Command {
 	var indent int
 	cmd := &cobra.Command{
 		Use:   "check [file or path]",
@@ -19,14 +20,24 @@ func NewCommand(logger formatter.Log) *cobra.Command {
 			}
 
 			indent, _ := cmd.Flags().GetInt("indent")
-			fileManager := formatter.NewFileManager(indent, logger)
-			if err := fileManager.Check(args[0]); err != nil {
-				return err
+			fileManager := formatter.NewFileManager(indent)
+			if result := fileManager.Check(args[0]); result != nil {
+				for _, r := range result {
+					if s, ok := r.(string); ok {
+						log.Success(s)
+
+						continue
+					}
+					if e, ok := r.(error); ok {
+						log.Error(e)
+					}
+				}
 			}
 
 			return nil
 		},
 	}
 	cmd.Flags().IntVarP(&indent, "indent", "i", 2, "set the indentation for Gherkin features (default 2)")
+
 	return cmd
 }

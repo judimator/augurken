@@ -9,6 +9,24 @@ on:
       - '*'
 
 jobs:
+  golangci-lint:
+    name: Golang-CI (lint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5 # action page: <https://github.com/actions/setup-go>
+        with:
+          go-version: stable
+
+      - name: Run linter
+        uses: golangci/golangci-lint-action@v4.0.0
+        with:
+          version: v1.58 # without patch version
+          only-new-issues: false # show only new issues if it's a pull request
+          args: -v --build-tags=race --timeout=10m
   go-test:
     name: Unit tests
     runs-on: ubuntu-latest

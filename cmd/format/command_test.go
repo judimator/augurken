@@ -1,30 +1,11 @@
 package format
 
 import (
-	"bytes"
-	"log"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
-
-var (
-	buff       bytes.Buffer
-	buffLogger = log.New(&buff, "", log.Lmsgprefix)
-)
-
-type BuffLogger struct{}
-
-func (l BuffLogger) Print(str string) {
-	buffLogger.Println(str)
-}
-func (l BuffLogger) Error(err error) {
-	buffLogger.Println(err)
-}
-func (l BuffLogger) Success(str string) {
-	buffLogger.Println(str)
-}
 
 func TestFormatAndReplaceFile(t *testing.T) {
 	content := []byte(`Feature: test
@@ -41,9 +22,9 @@ hello world
 
 	assert.NoError(t, os.RemoveAll("tmp/"))
 	assert.NoError(t, os.MkdirAll("tmp/", 0o777))
-	assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o777))
+	assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o600))
 
-	command := NewCommand(BuffLogger{})
+	command := NewCommand()
 	command.SetArgs([]string{"tmp/file1.feature", "-i", "4"})
 	err := command.Execute()
 
@@ -84,9 +65,9 @@ hello world
 
 	assert.NoError(t, os.RemoveAll("tmp/"))
 	assert.NoError(t, os.MkdirAll("tmp/", 0o777))
-	assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o777))
+	assert.NoError(t, os.WriteFile("tmp/file1.feature", content, 0o600))
 
-	command := NewCommand(BuffLogger{})
+	command := NewCommand()
 	command.SetArgs([]string{"tmp", "-i", "4"})
 	err := command.Execute()
 

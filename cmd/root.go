@@ -6,12 +6,11 @@ import (
 
 	"github.com/judimator/augurken/cmd/check"
 	"github.com/judimator/augurken/cmd/format"
-	"github.com/judimator/augurken/formatter"
 	"github.com/judimator/augurken/meta"
 	"github.com/spf13/cobra"
 )
 
-func NewCommand(cmdName string, logger formatter.Log) *cobra.Command {
+func NewCommand(cmdName string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: cmdName,
 		Version: fmt.Sprintf(
@@ -23,6 +22,7 @@ func NewCommand(cmdName string, logger formatter.Log) *cobra.Command {
 			runtime.GOARCH,
 		),
 	}
-	cmd.AddCommand(format.NewCommand(logger), check.NewCommand(logger))
+	cmd.AddCommand(format.NewCommand(), check.NewCommand())
+
 	return cmd
 }

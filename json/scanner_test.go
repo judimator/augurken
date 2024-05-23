@@ -20,12 +20,14 @@ type CaseName struct {
 func Name(s string) (c CaseName) {
 	c.Name = s
 	runtime.Callers(2, c.Where.pc[:])
+
 	return c
 }
 
 func (pos CasePos) String() string {
 	frames := runtime.CallersFrames(pos.pc[:])
 	frame, _ := frames.Next()
+
 	return fmt.Sprintf("%s:%d", path.Base(frame.File), frame.Line)
 }
 
@@ -91,7 +93,9 @@ func TestIndent(t *testing.T) {
 }`},
 		{Name(""), "{\"\":\"<>&\u2028\u2029\"}", "{\n    \"\": \"<>&\u2028\u2029\"\n}"}, // See golang.org/issue/34070
 	}
+
 	var buf bytes.Buffer
+
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			buf.Reset()
@@ -118,6 +122,7 @@ func TestIndentErrors(t *testing.T) {
 		t.Run(tt.Name, func(t *testing.T) {
 			slice := make([]uint8, 0)
 			buf := bytes.NewBuffer(slice)
+
 			if err := Indent(buf, []uint8(tt.in), "", ""); err != nil {
 				if !reflect.DeepEqual(err, tt.err) {
 					t.Fatalf("%s: Indent error:\n\tgot:  %v\n\twant: %v", tt.Where, err, tt.err)

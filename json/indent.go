@@ -11,9 +11,11 @@ import (
 func appendNewline(dst []byte, prefix, indent string, depth int) []byte {
 	dst = append(dst, '\n')
 	dst = append(dst, prefix...)
+
 	for i := 0; i < depth; i++ {
 		dst = append(dst, indent...)
 	}
+
 	return dst
 }
 
@@ -40,27 +42,35 @@ func Indent(dst *bytes.Buffer, src []byte, prefix, indent string) error {
 	dst.Grow(indentGrowthFactor * len(src))
 	b := dst.AvailableBuffer()
 	b, err := appendIndent(b, src, prefix, indent)
+
 	if err == nil {
 		dst.Write(b)
 	}
+
 	return err
 }
 
 func appendIndent(dst, src []byte, prefix string, indent string) ([]byte, error) {
 	origLen := len(dst)
 	scan := newScanner()
+
 	defer freeScanner(scan)
+
 	needIndent := false
 	depth := 0
+
 	for _, c := range src {
 		scan.bytes++
 		v := scan.step(scan, c)
+
 		if v == scanSkipSpace {
 			continue
 		}
+
 		if v == scanError {
 			break
 		}
+
 		if needIndent && v != scanEndObject && v != scanEndArray {
 			needIndent = false
 			depth++
@@ -71,11 +81,14 @@ func appendIndent(dst, src []byte, prefix string, indent string) ([]byte, error)
 		// (in particular, punctuation in strings) unmodified.
 		if v == scanContinue {
 			dst = append(dst, c)
+
 			continue
 		}
+
 		if v == scanContinueAfterMissingComma {
 			dst = appendNewline(dst, prefix, indent, depth)
 			dst = append(dst, c)
+
 			continue
 		}
 
@@ -84,6 +97,7 @@ func appendIndent(dst, src []byte, prefix string, indent string) ([]byte, error)
 		case '{', '[':
 			// delay indent so that empty object and array are formatted as {} and [].
 			needIndent = true
+
 			dst = append(dst, c)
 		case ',':
 			dst = append(dst, c)
@@ -98,13 +112,16 @@ func appendIndent(dst, src []byte, prefix string, indent string) ([]byte, error)
 				depth--
 				dst = appendNewline(dst, prefix, indent, depth)
 			}
+
 			dst = append(dst, c)
 		default:
 			dst = append(dst, c)
 		}
 	}
+
 	if scan.eof() == scanError {
 		return dst[:origLen], scan.err
 	}
+
 	return dst, nil
 }

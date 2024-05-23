@@ -13,5 +13,6 @@ func parse(content []byte) (*token, error) {
 	scanner := gherkin.NewScanner(bytes.NewBuffer(content))
 	parser := gherkin.NewParser(builder)
 	parser.StopAtFirstError(true)
+
 	return token, parser.Parse(scanner, matcher)
 }

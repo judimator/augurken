@@ -9,20 +9,24 @@ import (
 func Valid(data []byte) bool {
 	scan := newScanner()
 	defer freeScanner(scan)
+
 	return checkValid(data, scan) == nil
 }
 
 func checkValid(data []byte, scan *scanner) error {
 	scan.reset()
+
 	for _, c := range data {
 		scan.bytes++
 		if scan.step(scan, c) == scanError {
 			return scan.err
 		}
 	}
+
 	if scan.eof() == scanError {
 		return scan.err
 	}
+
 	return nil
 }
 
@@ -52,6 +56,7 @@ func newScanner() *scanner {
 	// scan.reset by design doesn't set bytes to zero
 	scan.bytes = 0
 	scan.reset()
+
 	return scan
 }
 
@@ -60,6 +65,7 @@ func freeScanner(scan *scanner) {
 	if len(scan.parseState) > 1024 {
 		scan.parseState = nil
 	}
+
 	scannerPool.Put(scan)
 }
 
@@ -113,16 +119,21 @@ func (s *scanner) eof() int {
 	if s.err != nil {
 		return scanError
 	}
+
 	if s.endTop {
 		return scanEnd
 	}
+
 	s.step(s, ' ')
+
 	if s.endTop {
 		return scanEnd
 	}
+
 	if s.err == nil {
 		s.err = &SyntaxError{"unexpected end of JSON input", s.bytes}
 	}
+
 	return scanError
 }
 
@@ -133,6 +144,7 @@ func (s *scanner) pushParseState(c byte, newParseState int, successState int) in
 	if len(s.parseState) <= maxNestingDepth {
 		return successState
 	}
+
 	return s.error(c, "exceeded max JSON depth")
 }
 
@@ -141,6 +153,7 @@ func (s *scanner) pushParseState(c byte, newParseState int, successState int) in
 func (s *scanner) popParseState() {
 	n := len(s.parseState) - 1
 	s.parseState = s.parseState[0:n]
+
 	if n == 0 {
 		s.step = stateEndTop
 		s.endTop = true
@@ -158,9 +171,11 @@ func stateBeginValueOrEmpty(s *scanner, c byte) int {
 	if isSpace(c) {
 		return scanSkipSpace
 	}
+
 	if c == ']' {
 		return stateEndValue(s, c)
 	}
+
 	return stateBeginValue(s, c)
 }
 
@@ -169,39 +184,52 @@ func stateBeginValue(s *scanner, c byte) int {
 	if isSpace(c) {
 		return scanSkipSpace
 	}
+
 	switch c {
 	case '{':
 		s.step = stateBeginStringOrEmpty
+
 		return s.pushParseState(c, parseObjectKey, scanBeginObject)
 	case '[':
 		s.step = stateBeginValueOrEmpty
+
 		return s.pushParseState(c, parseArrayValue, scanBeginArray)
 	case '"':
 		s.step = stateInString
+
 		return scanBeginLiteral
 	case '-':
 		s.step = stateNeg
+
 		return scanBeginLiteral
 	case '0': // Beginning of 0.123
 		s.step = state0
+
 		return scanBeginLiteral
 	case 't': // Beginning of true
 		s.step = stateT
+
 		return scanBeginLiteral
 	case 'f': // Beginning of false
 		s.step = stateF
+
 		return scanBeginLiteral
 	case 'n': // Beginning of null
 		s.step = stateN
+
 		return scanBeginLiteral
 	case '<':
 		s.step = stateInPlaceholder
+
 		return scanBeginPlaceholder
 	}
+
 	if '1' <= c && c <= '9' { // Beginning of 1234.5
 		s.step = state1
+
 		return scanBeginLiteral
 	}
+
 	return s.error(c, "looking for beginning of value")
 }
 
@@ -210,11 +238,14 @@ func stateBeginStringOrEmpty(s *scanner, c byte) int {
 	if isSpace(c) {
 		return scanSkipSpace
 	}
+
 	if c == '}' {
 		n := len(s.parseState)
 		s.parseState[n-1] = parseObjectValue
+
 		return stateEndValue(s, c)
 	}
+
 	return stateBeginStringOrPlaceHolder(s, c)
 }
 
@@ -226,15 +257,19 @@ func stateInPlaceholder(s *scanner, c byte) int {
 			// Completed top-level before the current byte.
 			s.step = stateEndTop
 			s.endTop = true
+
 			return stateEndTop(s, c)
 		}
 		// Guess it is `{...,<placeholder>,...}`. Consider that `parseObjectKey` finished
 		if s.parseState[n-1] == parseObjectKey {
 			s.parseState[n-1] = parseObjectValue
 		}
+
 		s.step = stateEndValue
+
 		return scanEndPlaceholder
 	}
+
 	return scanContinue
 }
 
@@ -243,14 +278,19 @@ func stateBeginStringOrPlaceHolder(s *scanner, c byte) int {
 	if isSpace(c) {
 		return scanSkipSpace
 	}
+
 	if c == '"' {
 		s.step = stateInString
+
 		return scanBeginLiteral
 	}
+
 	if c == '<' {
 		s.step = stateInPlaceholder
+
 		return scanBeginPlaceholder
 	}
+
 	return s.error(c, "looking for beginning of object key string or placeholder")
 }
 
@@ -262,53 +302,69 @@ func stateEndValue(s *scanner, c byte) int {
 		// Completed top-level before the current byte.
 		s.step = stateEndTop
 		s.endTop = true
+
 		return stateEndTop(s, c)
 	}
+
 	if isSpace(c) {
 		s.step = stateEndValue
+
 		return scanSkipSpace
 	}
+
 	ps := s.parseState[n-1]
 	switch ps {
 	case parseObjectKey:
 		if c == ':' {
 			s.parseState[n-1] = parseObjectValue
 			s.step = stateBeginValue
+
 			return scanObjectKey
 		}
+
 		return s.error(c, "after object key")
 	case parseObjectValue:
 		if c == ',' {
 			s.parseState[n-1] = parseObjectKey
 			s.step = stateBeginValue
+
 			return scanObjectValue
 		}
+
 		if c == '}' {
 			s.popParseState()
+
 			return scanEndObject
 		}
 		// Reading after `{<placeholder>}`. It is the case when no comma after `{<placeholder>}`.
 		// Next might be either `"key": {` or `<placeholder>`
 		if c == '"' || c == '<' {
 			s.parseState[n-1] = parseObjectKey
+
 			return stateInStringAfterMissingComma(s, c)
 		}
+
 		return s.error(c, "after object key:value pair or placeholder")
 	case parseArrayValue:
 		if c == ',' {
 			s.step = stateBeginValue
+
 			return scanArrayValue
 		}
 		// Next might be `<placeholder>`
 		if c == '<' {
 			return stateInStringAfterMissingComma(s, c)
 		}
+
 		if c == ']' {
 			s.popParseState()
+
 			return scanEndArray
 		}
+
 		return s.error(c, "after array element")
 	}
+
 	return s.error(c, "")
 }
 
@@ -320,6 +376,7 @@ func stateEndTop(s *scanner, c byte) int {
 		// Complain about non-space byte on next call.
 		s.error(c, "after top-level value")
 	}
+
 	return scanEnd
 }
 
@@ -327,25 +384,33 @@ func stateEndTop(s *scanner, c byte) int {
 func stateInString(s *scanner, c byte) int {
 	if c == '"' {
 		s.step = stateEndValue
+
 		return scanContinue
 	}
+
 	if c == '\\' {
 		s.step = stateInStringEsc
+
 		return scanContinue
 	}
+
 	if c < 0x20 {
 		return s.error(c, "in string literal")
 	}
+
 	return scanContinue
 }
 
 func stateInStringAfterMissingComma(s *scanner, c byte) int {
 	if c == '"' {
 		s.step = stateInString
+
 		return scanContinueAfterMissingComma
 	}
+
 	if c == '<' {
 		s.step = stateInPlaceholder
+
 		return scanContinueAfterMissingComma
 	}
 
@@ -357,11 +422,14 @@ func stateInStringEsc(s *scanner, c byte) int {
 	switch c {
 	case 'b', 'f', 'n', 'r', 't', '\\', '/', '"':
 		s.step = stateInString
+
 		return scanContinue
 	case 'u':
 		s.step = stateInStringEscU
+
 		return scanContinue
 	}
+
 	return s.error(c, "in string escape code")
 }
 
@@ -369,6 +437,7 @@ func stateInStringEsc(s *scanner, c byte) int {
 func stateInStringEscU(s *scanner, c byte) int {
 	if '0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F' {
 		s.step = stateInStringEscU1
+
 		return scanContinue
 	}
 	// numbers
@@ -379,6 +448,7 @@ func stateInStringEscU(s *scanner, c byte) int {
 func stateInStringEscU1(s *scanner, c byte) int {
 	if '0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F' {
 		s.step = stateInStringEscU12
+
 		return scanContinue
 	}
 	// numbers
@@ -389,6 +459,7 @@ func stateInStringEscU1(s *scanner, c byte) int {
 func stateInStringEscU12(s *scanner, c byte) int {
 	if '0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F' {
 		s.step = stateInStringEscU123
+
 		return scanContinue
 	}
 	// numbers
@@ -399,6 +470,7 @@ func stateInStringEscU12(s *scanner, c byte) int {
 func stateInStringEscU123(s *scanner, c byte) int {
 	if '0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F' {
 		s.step = stateInString
+
 		return scanContinue
 	}
 	// numbers
@@ -409,12 +481,16 @@ func stateInStringEscU123(s *scanner, c byte) int {
 func stateNeg(s *scanner, c byte) int {
 	if c == '0' {
 		s.step = state0
+
 		return scanContinue
 	}
+
 	if '1' <= c && c <= '9' {
 		s.step = state1
+
 		return scanContinue
 	}
+
 	return s.error(c, "in numeric literal")
 }
 
@@ -423,8 +499,10 @@ func stateNeg(s *scanner, c byte) int {
 func state1(s *scanner, c byte) int {
 	if '0' <= c && c <= '9' {
 		s.step = state1
+
 		return scanContinue
 	}
+
 	return state0(s, c)
 }
 
@@ -432,12 +510,16 @@ func state1(s *scanner, c byte) int {
 func state0(s *scanner, c byte) int {
 	if c == '.' {
 		s.step = stateDot
+
 		return scanContinue
 	}
+
 	if c == 'e' || c == 'E' {
 		s.step = stateE
+
 		return scanContinue
 	}
+
 	return stateEndValue(s, c)
 }
 
@@ -446,8 +528,10 @@ func state0(s *scanner, c byte) int {
 func stateDot(s *scanner, c byte) int {
 	if '0' <= c && c <= '9' {
 		s.step = stateDot0
+
 		return scanContinue
 	}
+
 	return s.error(c, "after decimal point in numeric literal")
 }
 
@@ -457,10 +541,13 @@ func stateDot0(s *scanner, c byte) int {
 	if '0' <= c && c <= '9' {
 		return scanContinue
 	}
+
 	if c == 'e' || c == 'E' {
 		s.step = stateE
+
 		return scanContinue
 	}
+
 	return stateEndValue(s, c)
 }
 
@@ -469,8 +556,10 @@ func stateDot0(s *scanner, c byte) int {
 func stateE(s *scanner, c byte) int {
 	if c == '+' || c == '-' {
 		s.step = stateESign
+
 		return scanContinue
 	}
+
 	return stateESign(s, c)
 }
 
@@ -479,8 +568,10 @@ func stateE(s *scanner, c byte) int {
 func stateESign(s *scanner, c byte) int {
 	if '0' <= c && c <= '9' {
 		s.step = stateE0
+
 		return scanContinue
 	}
+
 	return s.error(c, "in exponent of numeric literal")
 }
 
@@ -491,6 +582,7 @@ func stateE0(s *scanner, c byte) int {
 	if '0' <= c && c <= '9' {
 		return scanContinue
 	}
+
 	return stateEndValue(s, c)
 }
 
@@ -498,8 +590,10 @@ func stateE0(s *scanner, c byte) int {
 func stateT(s *scanner, c byte) int {
 	if c == 'r' {
 		s.step = stateTr
+
 		return scanContinue
 	}
+
 	return s.error(c, "in literal true (expecting 'r')")
 }
 
@@ -507,8 +601,10 @@ func stateT(s *scanner, c byte) int {
 func stateTr(s *scanner, c byte) int {
 	if c == 'u' {
 		s.step = stateTru
+
 		return scanContinue
 	}
+
 	return s.error(c, "in literal true (expecting 'u')")
 }
 
@@ -516,8 +612,10 @@ func stateTr(s *scanner, c byte) int {
 func stateTru(s *scanner, c byte) int {
 	if c == 'e' {
 		s.step = stateEndValue
+
 		return scanContinue
 	}
+
 	return s.error(c, "in literal true (expecting 'e')")
 }
 
@@ -525,8 +623,10 @@ func stateTru(s *scanner, c byte) int {
 func stateF(s *scanner, c byte) int {
 	if c == 'a' {
 		s.step = stateFa
+
 		return scanContinue
 	}
+
 	return s.error(c, "in literal false (expecting 'a')")
 }
 
@@ -534,8 +634,10 @@ func stateF(s *scanner, c byte) int {
 func stateFa(s *scanner, c byte) int {
 	if c == 'l' {
 		s.step = stateFal
+
 		return scanContinue
 	}
+
 	return s.error(c, "in literal false (expecting 'l')")
 }
 
@@ -543,8 +645,10 @@ func stateFa(s *scanner, c byte) int {
 func stateFal(s *scanner, c byte) int {
 	if c == 's' {
 		s.step = stateFals
+
 		return scanContinue
 	}
+
 	return s.error(c, "in literal false (expecting 's')")
 }
 
@@ -552,8 +656,10 @@ func stateFal(s *scanner, c byte) int {
 func stateFals(s *scanner, c byte) int {
 	if c == 'e' {
 		s.step = stateEndValue
+
 		return scanContinue
 	}
+
 	return s.error(c, "in literal false (expecting 'e')")
 }
 
@@ -561,8 +667,10 @@ func stateFals(s *scanner, c byte) int {
 func stateN(s *scanner, c byte) int {
 	if c == 'u' {
 		s.step = stateNu
+
 		return scanContinue
 	}
+
 	return s.error(c, "in literal null (expecting 'u')")
 }
 
@@ -570,8 +678,10 @@ func stateN(s *scanner, c byte) int {
 func stateNu(s *scanner, c byte) int {
 	if c == 'l' {
 		s.step = stateNul
+
 		return scanContinue
 	}
+
 	return s.error(c, "in literal null (expecting 'l')")
 }
 
@@ -579,14 +689,16 @@ func stateNu(s *scanner, c byte) int {
 func stateNul(s *scanner, c byte) int {
 	if c == 'l' {
 		s.step = stateEndValue
+
 		return scanContinue
 	}
+
 	return s.error(c, "in literal null (expecting 'l')")
 }
 
 // stateError is the state after reaching a syntax error,
 // such as after reading `[1}` or `5.1.2`.
-func stateError(s *scanner, c byte) int {
+func stateError(_ *scanner, _ byte) int {
 	return scanError
 }
 
@@ -594,6 +706,7 @@ func stateError(s *scanner, c byte) int {
 func (s *scanner) error(c byte, context string) int {
 	s.step = stateError
 	s.err = &SyntaxError{"invalid character " + quoteChar(c) + " " + context, s.bytes}
+
 	return scanError
 }
 
@@ -603,10 +716,12 @@ func quoteChar(c byte) string {
 	if c == '\'' {
 		return `'\''`
 	}
+
 	if c == '"' {
 		return `'"'`
 	}
 	// use quoted string with different quotation marks
 	s := strconv.Quote(string(c))
+
 	return "'" + s[1:len(s)-1] + "'"
 }
