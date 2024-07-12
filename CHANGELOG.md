@@ -1,3 +1,13 @@
+## [v1.3.2](https://github.com/judimator/augurken/tree/v1.3.2)
+
+**Enhancements:**
+- Fix format and check command exit code
+
+## [v1.3.1](https://github.com/judimator/augurken/tree/v1.3.1)
+
+**Enhancements:**
+- Update dependencies
+
 ## [v1.3.0](https://github.com/judimator/augurken/tree/v1.3.0)
 
 **Enhancements:**

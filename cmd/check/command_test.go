@@ -34,7 +34,7 @@ hello world
 	command.SetArgs([]string{"tmp/file1.feature"})
 	err := command.Execute()
 
-	assert.NoError(t, err)
+	assert.Error(t, err)
 	assert.EqualValues(t, `an error occurred with file "tmp/file1.feature" : file is not properly formatted`+"\n", buff.String())
 	// Clean up
 	_ = os.RemoveAll("tmp/")
@@ -65,7 +65,7 @@ hello world
 	command.SetArgs([]string{"tmp", "-i", "4"})
 	err := command.Execute()
 
-	assert.NoError(t, err)
+	assert.Error(t, err)
 	assert.EqualValues(t, `an error occurred with file "tmp/file1.feature" : file is not properly formatted`+"\n", buff.String())
 	// Clean up
 	_ = os.RemoveAll("tmp/")

@@ -16,9 +16,13 @@ func NewCommand() *cobra.Command {
 		Args:  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return errors.New("please, specify file or folder")
+				err := errors.New("please, specify file or folder")
+				log.Error(err)
+
+				return err
 			}
 
+			success := true
 			indent, _ := cmd.Flags().GetInt("indent")
 			fileManager := formatter.NewFileManager(indent)
 			result := fileManager.FormatAndReplace(args[0])
@@ -31,7 +35,12 @@ func NewCommand() *cobra.Command {
 				}
 				if e, ok := r.(error); ok {
 					log.Error(e)
+					success = false
 				}
+			}
+
+			if !success {
+				return errors.New("error occurred while formatting file/folder")
 			}
 
 			return nil
