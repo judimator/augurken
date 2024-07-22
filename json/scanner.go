@@ -38,11 +38,12 @@ type SyntaxError struct {
 func (e *SyntaxError) Error() string { return e.msg }
 
 type scanner struct {
-	step       func(*scanner, byte) int
-	endTop     bool
-	parseState []int
-	err        error
-	bytes      int64
+	step             func(*scanner, byte) int
+	endTop           bool
+	parseState       []int
+	err              error
+	bytes            int64
+	placeholderStack placeholderStack
 }
 
 var scannerPool = sync.Pool{
@@ -51,10 +52,30 @@ var scannerPool = sync.Pool{
 	},
 }
 
+type placeholderStack struct {
+	chars  []byte
+	length int
+}
+
+func (s *placeholderStack) push(char byte) {
+	s.chars = append(s.chars, char)
+	s.length++
+}
+
+func (s *placeholderStack) pop() byte {
+	char := s.chars[len(s.chars)-1]
+
+	s.chars = s.chars[0 : len(s.chars)-1]
+	s.length--
+
+	return char
+}
+
 func newScanner() *scanner {
 	scan := scannerPool.Get().(*scanner)
 	// scan.reset by design doesn't set bytes to zero
 	scan.bytes = 0
+	scan.placeholderStack = placeholderStack{}
 	scan.reset()
 
 	return scan
@@ -109,6 +130,7 @@ const maxNestingDepth = 10000
 func (s *scanner) reset() {
 	s.step = stateBeginValue
 	s.parseState = s.parseState[0:0]
+	s.placeholderStack.chars = s.placeholderStack.chars[0:0]
 	s.err = nil
 	s.endTop = false
 }
@@ -220,6 +242,7 @@ func stateBeginValue(s *scanner, c byte) int {
 		return scanBeginLiteral
 	case '<':
 		s.step = stateInPlaceholder
+		s.placeholderStack.push(c)
 
 		return scanBeginPlaceholder
 	}
@@ -251,7 +274,18 @@ func stateBeginStringOrEmpty(s *scanner, c byte) int {
 
 // stateInPlaceholder is the state after reading <placeholder>
 func stateInPlaceholder(s *scanner, c byte) int {
-	if c == '>' {
+	switch c {
+	case '>':
+		if s.placeholderStack.length == 0 {
+			return s.error(c, "Invalid placeholder given")
+		}
+
+		s.placeholderStack.pop()
+
+		if s.placeholderStack.length >= 1 {
+			return scanContinue
+		}
+
 		n := len(s.parseState)
 		if n == 0 {
 			// Completed top-level before the current byte.
@@ -268,9 +302,13 @@ func stateInPlaceholder(s *scanner, c byte) int {
 		s.step = stateEndValue
 
 		return scanEndPlaceholder
-	}
+	case '<':
+		s.placeholderStack.push(c)
 
-	return scanContinue
+		return scanContinue
+	default:
+		return scanContinue
+	}
 }
 
 // stateBeginStringOrPlaceHolder is the state after reading `{"key": value,`.
@@ -287,6 +325,7 @@ func stateBeginStringOrPlaceHolder(s *scanner, c byte) int {
 
 	if c == '<' {
 		s.step = stateInPlaceholder
+		s.placeholderStack.push(c)
 
 		return scanBeginPlaceholder
 	}
@@ -410,6 +449,7 @@ func stateInStringAfterMissingComma(s *scanner, c byte) int {
 
 	if c == '<' {
 		s.step = stateInPlaceholder
+		s.placeholderStack.push(c)
 
 		return scanContinueAfterMissingComma
 	}

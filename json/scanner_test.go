@@ -92,6 +92,9 @@ func TestIndent(t *testing.T) {
     }
 }`},
 		{Name(""), "{\"\":\"<>&\u2028\u2029\"}", "{\n    \"\": \"<>&\u2028\u2029\"\n}"}, // See golang.org/issue/34070
+		{Name(""), `{"x":<p1:<p2>:v>}`, `{
+    "x": <p1:<p2>:v>
+}`},
 	}
 
 	var buf bytes.Buffer

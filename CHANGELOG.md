@@ -1,3 +1,8 @@
+## [v1.4.0](https://github.com/judimator/augurken/tree/v1.4.0)
+
+**Enhancements:**
+- Add support of nested placeholders in JSON like `{"x":<p1:<p2>:v>}`
+
 ## [v1.3.2](https://github.com/judimator/augurken/tree/v1.3.2)
 
 **Enhancements:**
